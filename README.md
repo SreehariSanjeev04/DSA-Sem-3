@@ -1,1 +1,1 @@
-Some useful algorithms for personal data structures course
+This repo contains solutions of Data Structures and Algorithms Lab assigment (Sem 3) at NIT Calicut.
