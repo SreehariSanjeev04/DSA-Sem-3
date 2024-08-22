@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-int rightCounter = 0;
-int leftCounter = 0;
+typedef struct Counter
+{
+    int leftCounter;
+    int rightCounter;
+} Counter;
 typedef struct node
 {
     int val;
@@ -18,7 +21,7 @@ int getHeight(Node *n)
 Node *createNode(int value)
 {
     Node *node = (Node *)malloc(sizeof(Node));
-    node->height = 1;
+    node->height = 0;
     node->val = value;
     node->left = NULL;
     node->right = NULL;
@@ -50,24 +53,26 @@ int max(int a, int b)
 {
     return a > b ? a : b;
 }
-Node *rightRotate(Node *y)
+Node *rightRotate(Node *y, Counter *counter)
 {
+    counter->rightCounter++;
     Node *x = y->left;
     Node *T2 = x->right;
     x->right = y;
     y->left = T2;
 
-    // Update heights
     y->height = max(getHeight(y->right), getHeight(y->left)) + 1;
     x->height = max(getHeight(x->right), getHeight(x->left)) + 1;
 
     return x;
 }
-void AVL_rotations(Node* root) {
-    printf("%d %d\n",leftCounter,rightCounter);
-}
-Node *leftRotate(Node *x)
+void AVL_rotations(Node *root, Counter *counter)
 {
+    printf("%d %d\n", counter->leftCounter, counter->rightCounter);
+}
+Node *leftRotate(Node *x, Counter *counter)
+{
+    counter->leftCounter++;
     Node *y = x->right;
     Node *T2 = y->left;
 
@@ -79,43 +84,38 @@ Node *leftRotate(Node *x)
 
     return y;
 }
-
-Node *AVL_insert(Node *root, int value)
+Node *AVL_insert(Node *root, int value, Counter *counter)
 {
     if (!root)
         return createNode(value);
 
     if (value < root->val)
-        root->left = AVL_insert(root->left, value);
+        root->left = AVL_insert(root->left, value, counter);
     else if (value > root->val)
-        root->right = AVL_insert(root->right, value);
+        root->right = AVL_insert(root->right, value, counter);
     else
         return root;
 
     root->height = 1 + max(getHeight(root->left), getHeight(root->right));
     int bf = AVL_balanceFactor(root);
 
-    if (bf > 1 && value < root->left->val) {
-        rightCounter++;
-        return rightRotate(root);
+    if (bf > 1 && value < root->left->val)
+    {
+        return rightRotate(root, counter);
     }
     if (bf > 1 && value > root->left->val)
-    {   
-        leftCounter++;
-        rightCounter++;
-        root->left = leftRotate(root->left);
-        return rightRotate(root);
+    {
+        root->left = leftRotate(root->left, counter);
+        return rightRotate(root, counter);
     }
-    if (bf < -1 && value > root->right->val) {
-        leftCounter++;
-        return leftRotate(root);
+    if (bf < -1 && value > root->right->val)
+    {
+        return leftRotate(root, counter);
     }
     if (bf < -1 && value < root->right->val)
     {
-        rightCounter++;
-        leftCounter++;
-        root->right = rightRotate(root->right);
-        return leftRotate(root);
+        root->right = rightRotate(root->right, counter);
+        return leftRotate(root, counter);
     }
 
     return root;
@@ -128,23 +128,20 @@ Node *minval(Node *root)
         current = current->left;
     return current;
 }
-Node *AVL_delete(Node *root, int value, int *printAncestors)
+Node *AVL_delete(Node *root, int value, int *printAncestors, Counter *counter)
 {
     if (!root)
         return NULL;
-
-    if (*printAncestors)
-        printf("%d ", root->val);
-
+    static int succ = 0;
     if (value < root->val)
-        root->left = AVL_delete(root->left, value, printAncestors);
+        root->left = AVL_delete(root->left, value, printAncestors, counter);
     else if (value > root->val)
-        root->right = AVL_delete(root->right, value, printAncestors);
+        root->right = AVL_delete(root->right, value, printAncestors, counter);
     else
     {
+
         if (*printAncestors)
             printf("%d ", root->val);
-        *printAncestors = 0;
 
         if (!root->left)
         {
@@ -160,35 +157,39 @@ Node *AVL_delete(Node *root, int value, int *printAncestors)
         }
         else
         {
+            int flag = 0;
             Node *temp = minval(root->right);
             root->val = temp->val;
-            root->right = AVL_delete(root->right, temp->val, printAncestors);
+            succ = temp->val;
+            root->right = AVL_delete(root->right, temp->val, &flag, counter);
         }
-        root->height = 1 + max(getHeight(root->left), getHeight(root->right));
-        int bf = AVL_balanceFactor(root);
-        if (bf == 2)
-        {
-            if (AVL_balanceFactor(root->left) >= 0)
-                return rightRotate(root);
-            else
-            {
-                root->left = leftRotate(root->left);
-                return rightRotate(root);
-            }
-        }
-        else if (bf == -2)
-        {
-            if (AVL_balanceFactor(root->right) <= 0)
-                return leftRotate(root);
-            else
-            {
-                root->right = rightRotate(root->right);
-                return leftRotate(root);
-            }
-        }
-
-        return root;
     }
+    if (*printAncestors && root->val != succ)
+        printf("%d ", root->val);
+    root->height = 1 + max(getHeight(root->left), getHeight(root->right));
+    int bf = AVL_balanceFactor(root);
+    if (bf == 2)
+    {
+        if (AVL_balanceFactor(root->left) >= 0)
+            return rightRotate(root, counter);
+        else
+        {
+            root->left = leftRotate(root->left, counter);
+            return rightRotate(root, counter);
+        }
+    }
+    else if (bf == -2)
+    {
+        if (AVL_balanceFactor(root->right) <= 0)
+            return leftRotate(root, counter);
+        else
+        {
+            root->right = rightRotate(root->right, counter);
+            return leftRotate(root, counter);
+        }
+    }
+
+    return root;
 }
 void AVL_postorder(Node *root)
 {
@@ -203,6 +204,10 @@ int main()
     char c;
     int num;
     Node *root = NULL;
+    Counter *counter = (Counter *)malloc(sizeof(Counter));
+    counter->leftCounter = 0;
+    counter->rightCounter = 0;
+
     while (1)
     {
         scanf(" %c", &c);
@@ -210,13 +215,22 @@ int main()
         {
         case 'i':
             scanf("%d", &num);
-            root = AVL_insert(root, num);
+            root = AVL_insert(root, num, counter);
             break;
         case 'd':
         {
             scanf("%d", &num);
-            int printAncestors = 1;
-            root = AVL_delete(root, num, &printAncestors);
+            Node *searchNode = AVL_find(root, num);
+            if (!searchNode)
+            {
+                printf("-1");
+            }
+            else
+            {
+                int printAncestors = 1;
+                root = AVL_delete(root, num, &printAncestors, counter);
+            }
+            printf("\n");
             break;
         }
         case 'p':
@@ -246,14 +260,16 @@ int main()
                 printf("-1\n");
             break;
         }
-        case 'b': {
+        case 'b':
+        {
             scanf("%d", &num);
             Node *node = AVL_find(root, num);
             printf("%d\n", node ? AVL_balanceFactor(node) : -1);
             break;
         }
-        case 's': {
-            AVL_rotations(root);
+        case 's':
+        {
+            AVL_rotations(root, counter);
             break;
         }
         case 'e':
@@ -263,4 +279,6 @@ int main()
             break;
         }
     }
+    free(counter);
+    return 0;
 }
