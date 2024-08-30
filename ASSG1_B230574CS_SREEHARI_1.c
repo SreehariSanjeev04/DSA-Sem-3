@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<limits.h>
+#define COUNT 10
 #define MAX_SIZE 100
 
 typedef struct node {

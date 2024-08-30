@@ -82,8 +82,10 @@ Node *Insert(Node *root, int key, int value)
         root->left = Insert(root->left, key, value);
     else if (key > root->map.key)
         root->right = Insert(root->right, key, value);
-    else
+    else {
+        root->map.value = value;
         return root;
+    }
 
     root->height = 1 + max(getHeight(root->left), getHeight(root->right));
 
@@ -226,4 +228,5 @@ int main()
             break;
         }
     }
+    return 0;
 }
